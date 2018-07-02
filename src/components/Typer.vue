@@ -10,9 +10,9 @@
       <div class="word">
         <template v-for="(letter, index) in words[0]">
           <span class="letter"
-                v-bind:class="{correct: letterStatus(words[0], index) === 'correct',
-                               incorrect: letterStatus(words[0], index) === 'incorrect',
-                               idle: letterStatus(words[0], index) === 'idle'}"
+                v-bind:class="{correct: letterStatus(index) === 'correct',
+                               incorrect: letterStatus(index) === 'incorrect',
+                               idle: letterStatus(index) === 'idle'}"
                 :key="letter+index">
             {{ letter }}
           </span>
@@ -113,7 +113,7 @@ export default {
     }
   },
   created: function() {
-    this.targetWord = this.words[0];
+    this.targetWord = this.words[0] + ' ';
   },
   methods: {
     // TODO: Organise methods better
@@ -128,8 +128,16 @@ export default {
           this.timer.stop();
       }
 
+      // Count mistakes
+      if (this.targetWord !== '') {
+        const length = this.typedTrimmed().length;
+        if (this.targetWord.slice(0, length) !== this.typedTrimmed()) {
+          this.mistakes += 1;
+        };
+      }
+
       // Check if typed word trimmed at start is equal to targetted word
-      if (this.typedTrimmed() === this.words[0]) {
+      if (this.typedTrimmed() === this.targetWord) {
         // Enforce typing space after each word
         this.targetWord = this.words[1] + ' ';
         this.words.shift();
@@ -141,13 +149,12 @@ export default {
         this.corrects += 1;
       }
 
-      if (this.letterStatus(this.typedTrimmed(), this.typed.length - 1) === 'incorrect') this.mistakes += 1;
     },
 
-    letterStatus: function(word, index) {
-      if (word !== '') {
+    letterStatus: function(index) {
+      if (this.targetWord !== '') {
         if (this.typedTrimmed()[index] === this.targetWord[index]) return 'correct';
-        if (this.typedTrimmed().length >= index + 1
+        if (this.typedTrimmed().length - 1 >= index
             && this.typedTrimmed()[index] !== this.targetWord[index]) return 'incorrect';
       }
       return 'idle';
@@ -166,8 +173,9 @@ export default {
     },
 
     typedTrimmed: function() {
-      return this.typed.trimStart();
-  }
+      // FIXME: Should not be done with regexp
+      return this.typed.replace(/^\s+/, '');;
+    },
   },
 }
 </script>
