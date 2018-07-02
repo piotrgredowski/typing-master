@@ -1,7 +1,10 @@
 <template>
   <div>
     <div class="input-container">
-      <input class="input is-primary" v-model="typed" @keydown="handleWriting()">
+      <input class="input is-primary"
+             v-model="typed"
+             @keydown="startTimer()"
+             @keyup="handleWriting()">
     </div>
     <div class="words-container">
       <div class="word">
@@ -13,21 +16,55 @@
                 :key="letter+index">
             {{ letter }}
           </span>
-        </template>&nbsp
+        </template>&nbsp;
       </div>
-      <div class="word" v-for="(word, index) in words.slice(1, 4)" :key="word+index">
+      <div class="word" v-for="(word, index) in words.slice(1, 7)" :key="word+index">
         <template v-for="(letter, index) in word">
           <span class="letter"
                 :key="letter+index">
             {{ letter }}
           </span>
-        </template>&nbsp
+        </template>&nbsp;
+      </div>
+    </div>
+    <div class="statistics tile is-ancestor">
+      <div class="time tile is-3 is-parent is-vertical">
+        <div class="is-tile">Time</div>
+        <div class="is-tile">{{ timer.time / 1000 }}s</div>
+  </div>
+      <div class="correct-words tile is-3 is-parent is-vertical">
+        <div class="is-tile">Correct words</div>
+        <div class="is-tile">{{ corrects }}</div>
+      </div>
+      <div class="mistaken-words tile is-3 is-parent is-vertical">
+        <div class="is-tile">Mistakes</div>
+        <div class="is-tile">{{ mistakes }}</div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+export class Timer {
+  // Delta of time increase in ms
+  delta = 10;
+  interval;
+  time = 0;
+
+  constuctor() {
+  }
+
+  start() {
+    this.interval = setInterval(() => {
+      this.time += this.delta;
+    }, this.delta)
+  }
+
+  stop() {
+    clearInterval(this.interval);
+  }
+}
+
 export default {
   name: "Typer",
   data() {
@@ -67,39 +104,81 @@ export default {
       ],
       targetWord: '',
       writtenText: '',
+
+      started: false,
+      timer: new Timer(),
+
+      corrects: 0,
+      mistakes: 0,
     }
   },
   created: function() {
     this.targetWord = this.words[0];
   },
   methods: {
+    // TODO: Organise methods better
     wordAsArray: function(word) {
       return word.split();
     },
+
     handleWriting: function() {
-      if (this.typed === this.words[0]) {
-        this.targetWord = this.words[1];
+      // Check if it is last word, last letter and if is correctly typed - then stop timer
+      if (this.typedTrimmed() === this.words[this.words.length - 1]
+          && this.letterStatus(this.typed, -1) !== 'incorrect') {
+          this.timer.stop();
+      }
+
+      // Check if typed word trimmed at start is equal to targetted word
+      if (this.typedTrimmed() === this.words[0]) {
+        // Enforce typing space after each word
+        this.targetWord = this.words[1] + ' ';
         this.words.shift();
-        // FIXME: Not working for now.
+        // Reset typed after correct typed word
         this.$nextTick(() => {
           this.typed = '';
         })
+
+        this.corrects += 1;
       }
+
+      if (this.letterStatus(this.typedTrimmed(), this.typed.length - 1) === 'incorrect') this.mistakes += 1;
     },
+
     letterStatus: function(word, index) {
       if (word !== '') {
-        if (this.typed[index] === this.targetWord[index]) return 'correct';
-        if (this.typed.length === index + 1 && this.typed[index] !== word[index]) return 'incorrect';
+        if (this.typedTrimmed()[index] === this.targetWord[index]) return 'correct';
+        if (this.typedTrimmed().length >= index + 1
+            && this.typedTrimmed()[index] !== this.targetWord[index]) return 'incorrect';
       }
       return 'idle';
+    },
+
+    startTimer: function() {
+      if (!this.started) {
+        this.started = true;
+        this.timer.start();
     }
+    },
+
+    stopTimer: function() {
+      this.timer.stop();
+      this.started = false;
+    },
+
+    typedTrimmed: function() {
+      return this.typed.trimStart();
   }
+  },
 }
 </script>
 
 <style lang="scss">
-.input-container, .words-container {
+.input-container, .words-container, .statistics {
   padding: 1em;
+}
+
+.input-container {
+  width: 20em;
 }
 
 .words-container {
